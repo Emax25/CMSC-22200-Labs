@@ -29,8 +29,8 @@ typedef struct
 } bp_t;
 
 
-
-void bp_predict(/*......*/);
-void bp_update(/*......*/);
+void bp_init(bp_t *bp);
+void bp_predict(bp_t *bp, uint64_t PC, int *prediction);
+void bp_update(bp_t *bp, uint64_t PC, uint64_t target, int taken, int is_cond);
 
 #endif

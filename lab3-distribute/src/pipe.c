@@ -55,6 +55,8 @@ void pipe_init()
     HLT = FALSE;
     STALL = FALSE;
     initialize_pipe_registers();
+    pipe.bp = malloc(sizeof(bp_t));
+    bp_init(pipe.bp);
 }
 
 void pipe_cycle()
@@ -570,9 +572,7 @@ void forward_WB_EX(Pipe_Op operation) {
 
 void pipe_stage_fetch()
 {
-    if (EX_MEM.operation.failed_jump) {
-        return; 
-    }
+    if (EX_MEM.operation.failed_jump) return; 
     if (EX_MEM.operation.same_jump_word) {
         IF_DE.operation.word = EX_MEM.operation.same_jump_word; 
         IF_DE.operation.PC = pipe.PC; 
