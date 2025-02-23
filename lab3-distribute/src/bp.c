@@ -52,19 +52,18 @@ uint64_t bp_predict(bp_t *bp, uint64_t PC, int *prediction)
 
 void bp_update(bp_t *bp, uint64_t PC, uint64_t target, int taken, int is_cond) 
 {
-    int btb_index = (PC >> 2) & (BTB_SIZE - 1);
-    int pht_index = ((PC >> 2) ^ bp->ghr) & GHR_MASK;
+    int pht_index = (bp->ghr ^ ((PC >> 2) & GHR_MASK)) & GHR_MASK;
 
+    if (taken && bp->pht[pht_index] < 3) bp->pht[pht_index]++;
+    else if (!taken && bp->pht[pht_index] > 0) bp->pht[pht_index]--;
+
+    if (is_cond) {
+        bp->ghr = ((bp->ghr << 1) | (taken ? 1 : 0)) & GHR_MASK;
+    }
+
+    int btb_index = (PC >> 2) & (BTB_SIZE - 1);
     bp->btb_tag[btb_index] = PC;
     bp->btb_dest[btb_index] = target;
     bp->btb_valid[btb_index] = 1;
     bp->btb_cond[btb_index] = is_cond;
-
-    if (is_cond) {
-        uint8_t counter = bp->pht[pht_index];
-        if (taken && counter < 3) counter++;
-        else if (!taken && counter > 0) counter--;
-        bp->pht[pht_index] = counter;
-        bp->ghr = ((bp->ghr << 1) | taken) & GHR_MASK;
-    }
 }

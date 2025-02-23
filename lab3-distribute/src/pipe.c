@@ -454,6 +454,12 @@ void pipe_stage_execute()
         }
     }
 
+    if (operation.failed_jump){
+        flush_pipeline();
+        pipe.PC = PC;
+        return;
+    }
+
     bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
 
     memcpy(EX_MEM.REGS, regs, ARM_REGS * sizeof(int64_t));
@@ -610,6 +616,9 @@ void pipe_stage_fetch()
     IF_DE.operation = initialize_operation(); 
     IF_DE.operation.word = mem_read_32(IF_DE.PC);
     IF_DE.operation.PC = predicted_PC; 
+
+    if (prediction == -1) IF_DE.operation.failed_jump = true;
+
 }
 
 bool find_operation(uint8_t type, uint16_t opcode, uint32_t word)
