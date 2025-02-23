@@ -30,7 +30,7 @@ typedef struct
 
 
 void bp_init(bp_t *bp);
-void bp_predict(bp_t *bp, uint64_t PC, int *prediction);
+uint64_t bp_predict(bp_t *bp, uint64_t PC, int *prediction);
 void bp_update(bp_t *bp, uint64_t PC, uint64_t target, int taken, int is_cond);
 
 #endif

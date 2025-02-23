@@ -444,12 +444,16 @@ void pipe_stage_execute()
                 RUN_BIT = FALSE;
         }
     }
+
+    bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
+
     memcpy(EX_MEM.REGS, regs, ARM_REGS * sizeof(int64_t));
     EX_MEM.REGS[31] = 0;
     EX_MEM.operation = operation; 
     EX_MEM.FLAG_N = FLAG_N; 
     EX_MEM.FLAG_Z = FLAG_Z; 
     EX_MEM.PC = PC; 
+    
     if(EX_MEM.operation.will_jump) {
         if (IF_DE.operation.PC == EX_MEM.PC || EX_MEM.operation.failed_jump) {
             /* Handle if you branch to the same one*/
@@ -589,10 +593,13 @@ void pipe_stage_fetch()
         return; 
     }
 
-    IF_DE.PC = pipe.PC;          
+    int prediction;
+    uint64_t predicted_PC = bp_predict(pipe.bp, pipe.PC, &prediction);
+
+    IF_DE.PC = predicted_PC;          
     IF_DE.operation = initialize_operation(); 
     IF_DE.operation.word = mem_read_32(IF_DE.PC);
-    IF_DE.operation.PC = IF_DE.PC; 
+    IF_DE.operation.PC = predicted_PC; 
 }
 
 bool find_operation(uint8_t type, uint16_t opcode, uint32_t word)

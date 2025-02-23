@@ -56,9 +56,10 @@ void bp_update(bp_t *bp, uint64_t PC, uint64_t target, int taken, int is_cond)
     bp->btb_cond[btb_index] = is_cond;
 
     if (is_cond) {
-        uint8_t counter = bp->pht[pht_index]
+        uint8_t counter = bp->pht[pht_index];
         if (taken && counter < 3) counter++;
         else if (!taken && counter > 0) counter--;
+        bp->pht[pht_index] = counter;
         bp->ghr = ((bp->ghr << 1) | taken) & GHR_MASK;
     }
 }
