@@ -143,6 +143,7 @@ bool decode_IW(uint32_t word, uint16_t opcode);
 void incr_PC();
 void forward_WB_EX(Pipe_Op operation);
 void forward_MEM_EX(Pipe_Op operation);
+void flush_pipeline(); 
 
 
 #endif

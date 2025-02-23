@@ -17,7 +17,7 @@ typedef struct
     /* gshare */
     int ghr_bits;
     uint32_t ghr;
-    uint8_t *pht; /* size 2^ghr_bits */
+    uint8_t *pht; 
 
     /* BTB */
     int btb_size;

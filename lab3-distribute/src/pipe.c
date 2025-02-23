@@ -59,6 +59,15 @@ void pipe_init()
     bp_init(pipe.bp);
 }
 
+void flush_pipeline() {
+    IF_DE.operation = initialize_operation();
+    IF_DE.is_bubble = true;
+    DE_EX.operation = initialize_operation();
+    DE_EX.is_bubble = true;
+    EX_MEM.operation = initialize_operation();
+    EX_MEM.is_bubble = true;
+}
+
 void pipe_cycle()
 {  
     pipe_stage_wb();
@@ -75,7 +84,7 @@ void pipe_cycle()
 }
 
 void incr_PC(){
-    if (!HLT && !EX_MEM.operation.could_jump) { // do not increment if the next could be jump;
+    if (!HLT && !EX_MEM.operation.could_jump && !EX_MEM.operation.will_jump) { 
         pipe.PC += 4;
     }
 }
@@ -453,7 +462,7 @@ void pipe_stage_execute()
     EX_MEM.FLAG_N = FLAG_N; 
     EX_MEM.FLAG_Z = FLAG_Z; 
     EX_MEM.PC = PC; 
-    
+
     if(EX_MEM.operation.will_jump) {
         if (IF_DE.operation.PC == EX_MEM.PC || EX_MEM.operation.failed_jump) {
             /* Handle if you branch to the same one*/
@@ -464,6 +473,7 @@ void pipe_stage_execute()
             IF_DE.operation = initialize_operation(); 
             return; 
         }
+        flush_pipeline();
         pipe.PC = EX_MEM.PC; 
     }
 }
