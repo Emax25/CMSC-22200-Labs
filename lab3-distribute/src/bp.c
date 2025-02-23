@@ -57,9 +57,7 @@ void bp_update(bp_t *bp, uint64_t PC, uint64_t target, int taken, int is_cond)
     if (taken && bp->pht[pht_index] < 3) bp->pht[pht_index]++;
     else if (!taken && bp->pht[pht_index] > 0) bp->pht[pht_index]--;
 
-    if (is_cond) {
-        bp->ghr = ((bp->ghr << 1) | (taken ? 1 : 0)) & GHR_MASK;
-    }
+    if (is_cond) bp->ghr = ((bp->ghr << 1) | (taken ? 1 : 0)) & GHR_MASK;
 
     int btb_index = (PC >> 2) & (BTB_SIZE - 1);
     bp->btb_tag[btb_index] = PC;

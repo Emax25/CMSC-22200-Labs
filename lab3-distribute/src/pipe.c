@@ -602,12 +602,12 @@ void pipe_stage_fetch()
         pipe.PC = MEM_WB.PC; 
     }
     /* IF there was a conditional branch that was not taken, */
-    if (EX_MEM.operation.failed_jump)
-    {
-        IF_DE.operation.word = EX_MEM.operation.same_jump_word; 
-        IF_DE.operation.PC = pipe.PC; 
-        return; 
-    }
+    // if (EX_MEM.operation.failed_jump)
+    // {
+    //     IF_DE.operation.word = EX_MEM.operation.same_jump_word; 
+    //     IF_DE.operation.PC = pipe.PC; 
+    //     return; 
+    // }
 
     int prediction;
     uint64_t predicted_PC = bp_predict(pipe.bp, pipe.PC, &prediction);
@@ -618,7 +618,6 @@ void pipe_stage_fetch()
     IF_DE.operation.PC = predicted_PC; 
 
     if (prediction == -1) IF_DE.operation.failed_jump = true;
-
 }
 
 bool find_operation(uint8_t type, uint16_t opcode, uint32_t word)
