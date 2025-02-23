@@ -32,16 +32,21 @@ void bp_init(bp_t *bp)
 
 uint64_t bp_predict(bp_t *bp, uint64_t PC, int *prediction)
 {
-    int btb_index = (PC >> 2) & (BTB_SIZE - 1);
-    int pht_index = ((PC >> 2) ^ bp->ghr) & GHR_MASK;
-
+    int btb_index = (PC >> 2) & (BTB_SIZE - 1); 
     if (bp->btb_valid[btb_index] && bp->btb_tag[btb_index] == PC) {
-        if (!bp->btb_cond[btb_index] || bp->pht[pht_index] >= 2) {
+        if (bp->btb_cond[btb_index] == 0) {
             *prediction = 1;
             return bp->btb_dest[btb_index];
+        } 
+        else {
+            int pht_index = (bp->ghr ^ ((PC >> 2) & GHR_MASK)) & GHR_MASK; 
+            if (bp->pht[pht_index] >= 2) {
+                *prediction = 1;
+                return bp->btb_dest[btb_index];
+            }
         }
-    }
-    *prediction = 0;
+    } 
+    else *prediction = -1;
     return PC + 4;
 }
 
