@@ -90,9 +90,9 @@ void pipe_cycle()
 
 void flush_pipeline() {
     IF_DE.operation = initialize_operation();
-    IF_DE.is_bubble = true;
+    IF_DE.operation.is_bubble = true;
     DE_EX.operation = initialize_operation();
-    DE_EX.is_bubble = true;
+    DE_EX.operation.is_bubble = true;
 }
 
 void incr_PC(){
