@@ -54,12 +54,12 @@ void bp_update(bp_t *bp, uint64_t PC, uint64_t target, bool taken, bool is_cond)
 
         if (taken && bp->pht[pht_index] < 3) bp->pht[pht_index]++;
         else if (!taken && bp->pht[pht_index] > 0) bp->pht[pht_index]--;
-        bp->ghr = (bp->ghr << 1) | ((taken ? 1 : 0)) & 0xFF;
+        bp->ghr = ((bp->ghr << 1) | (taken ? 1 : 0)) & 0xFF;
     }
     else if (!taken) target = PC + 4; 
 
     int btb_index = (PC >> 2) & 0x3FF;
-    if (!bp->btb_valid[btb_index] | bp->btb_tag[btb_index] != PC)
+    if (!bp->btb_valid[btb_index] || bp->btb_tag[btb_index] != PC)
     {
         bp->btb_tag[btb_index] = PC;
         bp->btb_dest[btb_index] = target;
