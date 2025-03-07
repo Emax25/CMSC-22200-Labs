@@ -113,13 +113,13 @@ void pipe_stage_wb()
         if(prints) printf("In WB      | BUBBLE\n");
         return; 
     }
-    if(MEM_WB.is_bubble)
-    {   
-        MEM_WB.is_bubble = false;
-        if(prints) printf("In WB      | BUBBLE\n");
+    // if(MEM_WB.is_bubble)
+    // {   
+    //     MEM_WB.is_bubble = false;
+    //     if(prints) printf("In WB      | BUBBLE\n");
 
-        return;
-    }
+    //     return;
+    // }
     if(prints) printf("In WB      | word: %0X\n", MEM_WB.operation.word);
 
     // Update pipe
@@ -149,7 +149,7 @@ void pipe_stage_wb()
     }
     if (STALL)
     {
-        MEM_WB.is_bubble = true;
+        MEM_WB.operation.is_bubble = true;
     }
 
 }
@@ -508,7 +508,7 @@ void pipe_stage_execute()
     EX_MEM.PC = PC; 
     if(prints) printf("In EXECUTE | word: %0X\n", DE_EX.operation.word);
 
-    bp_update(pipe.bp,  DE_EX.PC, PC, operation.will_jump, type == CTYPE);
+    bp_update(pipe.bp,  DE_EX.PC, IF_DE.PC, PC, operation.will_jump, type == CTYPE);
 
     // if(EX_MEM.operation.will_jump) {
 
