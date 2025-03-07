@@ -31,11 +31,8 @@ typedef struct Pipe_Op {
 	bool is_load;
 	bool is_store;
 	bool will_jump;
-	bool could_jump; 
 	bool is_bubble; 
 	uint32_t PC; 
-	uint32_t same_jump_word;
-	bool failed_jump;
 	// STAGE
 } Pipe_Op;
 
