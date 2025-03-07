@@ -1,14 +1,3 @@
-/* 
- * Contributions: 
- * Together: 
- *   1) Implemented the base for 5-stage pipeline
- * Alicia: 
- *   1) Logic for branching
- *   2) Debugged Logic for data forwarding for C-type functions
- * Charlie: 
- *   1) Logic for forwarding and stalling for data dependencies
- */ 
-
 /*
 * CMSC 22200
 *
@@ -72,7 +61,6 @@ void pipe_init()
 
 void pipe_cycle()
 {  
-    printf("HLT: %0X, STALL: %0X, RUNBIT: %0X\n", HLT, STALL, RUN_BIT);
     pipe_stage_wb();
     if(RUN_BIT) {
         pipe_stage_mem();
@@ -85,7 +73,6 @@ void pipe_cycle()
         }
     }
     if (prints) printf("Pipe Cycle: %0lX\n", pipe.PC); 
-
 }
 
 void flush_pipeline() {
@@ -99,7 +86,6 @@ void incr_PC(){
     if (!HLT) { 
         bp_predict(pipe.bp, &pipe.PC);
     }
-    // && !EX_MEM.operation.could_jump
 }
 
 void delay(int milliseconds) {
@@ -113,13 +99,6 @@ void pipe_stage_wb()
         if(prints) printf("In WB      | BUBBLE\n");
         return; 
     }
-    // if(MEM_WB.is_bubble)
-    // {   
-    //     MEM_WB.is_bubble = false;
-    //     if(prints) printf("In WB      | BUBBLE\n");
-
-    //     return;
-    // }
     if(prints) printf("In WB      | word: %0X\n", MEM_WB.operation.word);
 
     // Update pipe
@@ -149,7 +128,8 @@ void pipe_stage_wb()
     }
     if (STALL)
     {
-        MEM_WB.operation.is_bubble = true;
+        EX_MEM.operation.is_bubble = true;
+        STALL = false;
     }
 
 }
@@ -163,11 +143,6 @@ void pipe_stage_mem()
         return;
     }
 
-    if (STALL)
-    {
-        STALL = false;
-        return;
-    }
     Pipe_Op operation = EX_MEM.operation; 
     uint8_t type = operation.type; 
     uint16_t opcode = operation.opcode;
@@ -176,7 +151,7 @@ void pipe_stage_mem()
 
     forward_MEM_EX(operation);
 
-    if (operation.will_jump && DE_EX.PC != PC) {
+    if (!predicted(DE_EX.PC, PC, operation.will_jump)) {
         pipe.PC = PC;
         flush_pipeline();
     }
@@ -273,85 +248,55 @@ void pipe_stage_execute()
     if (type == CTYPE) {
         int64_t COND_BR_address = operation.address;
         int8_t Rt = operation.Rt;
-        printf("COND_BR_address: %0X\n", COND_BR_address);
         switch(opcode) {
             case 0x5A8 ... 0x5AF:  // CBNZ
-                printf("CBNZ OLD PC: %0X\n", PC);
-                printf("Rt: %0X\n", Rt);
-                printf("reg[Rt]: %0X\n", regs[Rt]);
                 if(regs[Rt] != 0) {
-                    printf("NOT EQUAL TO ZERO!:\n");
                     PC = PC + COND_BR_address; 
-                    printf("NEW PC: %0X!:\n", PC);
-
                     operation.will_jump = true;
-                } else {
-                    operation.failed_jump = true;
-                }
+                } 
                 break; 
             case 0x5A0 ... 0x5A7:  // CBZ
-                printf("CBZ NEW PC: %0X\n", PC);
                 if(regs[Rt] == 0) {
                     operation.will_jump = true;
                     PC = PC + COND_BR_address; 
-                } else {
-                    operation.failed_jump = true;
-                }
+                } 
                 break; 
             case 0x2A0 ... 0x2A7:       // B.cond 
                 if (Rt == 0) { //BEQ
                     if (FLAG_Z) {
                         PC = PC + COND_BR_address; 
                         operation.will_jump = true;
-                        break; 
-                    } else {
-                        operation.failed_jump = true;
-                        break; 
-                    }
+                    } 
+                    break;
                 } else if (Rt == 1) { // BNE
                     if (!FLAG_Z) {
                         PC = (int64_t) (PC + COND_BR_address); 
                         operation.will_jump = true;
-                        break; 
-                    }  else {
-                        operation.failed_jump = true;
-                        break;
-                    }
+                    } 
+                    break;
                 } else if (Rt == 12) { // BGT
                     if(!FLAG_N) {
                         PC = (int64_t) (PC + COND_BR_address); 
                         operation.will_jump = true;
-                        break; 
-                    } else {
-                        operation.failed_jump = true;
-                        break; 
-                    }
+                    } 
+                    break;
                 } else if (Rt == 11) { // BLT 
                     if(FLAG_N) {
                         PC = (int64_t) (PC + COND_BR_address); 
                         operation.will_jump = true;
-                        break; 
-                    } else {
-                        operation.failed_jump = true;
                     }
                     break; 
                 } else if (Rt == 10) { // BGE 
                     if(FLAG_Z || !FLAG_N) {
                         PC = (int64_t) (PC + COND_BR_address); 
                         operation.will_jump = true;
-                        break; 
-                    } else {
-                        operation.failed_jump = true;
-                    }
+                    } 
                     break; 
                 } else if (Rt == 13) { // BLE 
                     if(FLAG_Z || FLAG_N) {
                         PC = (int64_t) (PC + COND_BR_address); 
                         operation.will_jump = true;
-                        break; 
-                    } else {
-                        operation.failed_jump = true;
-                    }
+                    } 
                     break; 
                 }
                 break;
@@ -399,7 +344,6 @@ void pipe_stage_execute()
                     break;
                 }
             default: 
-                printf("Opcode: %0X\n", opcode); 
                 printf("ERROR: Unknown Instruction in ITYPE\n");
         }
     }
@@ -508,45 +452,11 @@ void pipe_stage_execute()
     EX_MEM.PC = PC; 
     if(prints) printf("In EXECUTE | word: %0X\n", DE_EX.operation.word);
 
-    bp_update(pipe.bp,  DE_EX.PC, IF_DE.PC, PC, operation.will_jump, type == CTYPE);
-
-    // if(EX_MEM.operation.will_jump) {
-
-        
-
-    //     // if (IF_DE.operation.PC == EX_MEM.PC || EX_MEM.operation.failed_jump) {
-    //     //     /* Handle if you branch to the same one*/
-    //     //     EX_MEM.operation.will_jump = false; 
-    //     //     EX_MEM.operation.could_jump = true; 
-    //     //     // EX_MEM.operation.same_jump_word = IF_DE.operation.word; 
-    //     //     pipe.PC = EX_MEM.PC + 4; 
-    //     //     IF_DE.operation = initialize_operation(); 
-    //     //     return; 
-    //     // }
-
-    //     // pipe.PC = EX_MEM.PC; 
-    //     if(prints) printf("In EXECUTE | SETTING PIPE.PC to %0lX\n", EX_MEM.PC);
-
-    // }
+    bp_update(pipe.bp,  DE_EX.PC, PC, operation.will_jump, type == CTYPE);
 }
 
 void pipe_stage_decode()
 {
-    // if (EX_MEM.operation.could_jump && !EX_MEM.operation.same_jump_word) {
-    //     DE_EX.operation = initialize_operation();
-    //     DE_EX.operation.is_bubble = true; 
-    //     if(prints) printf("In DECODE   | SQUASH\n");
-    //     return; 
-    // }
-    // if (MEM_WB.operation.will_jump) {
-    //     if (IF_DE.operation.PC == MEM_WB.PC + 4) {
-    //     } else {
-    //         DE_EX.operation = initialize_operation(); 
-    //         if(prints) printf("In DECODE  | BUBBLE\n");
-    //         return; 
-    //     }
-    // }
-
     if (IF_DE.operation.is_bubble){
         DE_EX.operation = IF_DE.operation; 
         if(prints) printf("In DECODE  | BUBBLE\n");
@@ -559,12 +469,6 @@ void pipe_stage_decode()
     int op_len; 
     uint32_t word = IF_DE.operation.word;
 
-    // if (EX_MEM.operation.same_jump_word) {
-    //     DE_EX.operation = initialize_operation(); 
-    //     if(prints) printf("Same_jump\n");
-    //     if(prints) printf("In DECODE  | IF_DE word: %0X, opcode: %0X\n", IF_DE.operation.word, DE_EX.operation.opcode);
-    //     return; 
-    // }
 
     for(int i = 0; i < TYPE_LIST_SIZE; i++) {
         ins_type type_tuple = TYPE_LIST[i]; 
@@ -588,7 +492,6 @@ void pipe_stage_decode()
 void forward_MEM_EX(Pipe_Op operation) {
     if (operation.is_load && (operation.Rt == DE_EX.operation.Rn || operation.Rt == DE_EX.operation.Rm))
     {
-        operation.is_bubble = true;
         STALL = true;
     }
     else if (operation.is_store && DE_EX.operation.is_load)
@@ -598,7 +501,6 @@ void forward_MEM_EX(Pipe_Op operation) {
         if (ld_addr > wr_addr - 4 && ld_addr < wr_addr + 4)
         {
             STALL = true;
-            operation.is_bubble = true;
         }
     }
     if (operation.mod_reg && DE_EX.operation.is_store && operation.Rt == DE_EX.operation.Rt)
@@ -619,17 +521,7 @@ void forward_MEM_EX(Pipe_Op operation) {
         DE_EX.FLAG_Z = EX_MEM.FLAG_Z; 
     }
     if (DE_EX.operation.type == CTYPE) {
-        printf("Will need to data forward here! \n"); 
-        printf("operation.Rt: %0X\n", operation.Rt); 
-        printf("EX_MEM.operation.Rt: %0X\n", EX_MEM.operation.Rt); 
-        printf("EX_MEM.operation.Rn: %0X\n", EX_MEM.operation.Rn); 
-        printf("EX_MEM.operation.Rm: %0X\n", EX_MEM.operation.Rm); 
-
         if (DE_EX.operation.Rt == EX_MEM.operation.Rt) {
-            printf("operation.Rt, %0X\n", operation.Rt);
-            printf("EX_MEM.operation.Rt, %0X\n", EX_MEM.operation.Rt);
-
-            printf("SETTING DE_EX.REGS[DE_EX.operation.Rt]: %0X\n", EX_MEM.REGS[operation.Rt]); 
             DE_EX.REGS[DE_EX.operation.Rt] = EX_MEM.REGS[operation.Rt]; 
         }
     }
@@ -659,34 +551,6 @@ void forward_WB_EX(Pipe_Op operation) {
 
 void pipe_stage_fetch()
 {
-    // if (EX_MEM.operation.failed_jump) {
-    //     if(prints) printf("In FETCH   | IF_DE.word: %0X\n", IF_DE.operation.word);
-    //     return; 
-    // }
-    // if (EX_MEM.operation.same_jump_word) {
-    //     printf("IN FETCH    | SAME WORD\n");
-    //     IF_DE.operation.word = EX_MEM.operation.same_jump_word; 
-    //     IF_DE.operation.PC = pipe.PC; 
-    //     return; 
-    // }
-    // if (MEM_WB.operation.will_jump) {
-    //     if (MEM_WB.PC == IF_DE.PC) {
-    //     } else {
-    //         pipe.PC = MEM_WB.PC; 
-    //     }
-    // }
-    /* IF there was a conditional branch that was not taken, */
-    // if (EX_MEM.operation.failed_jump)
-    // {
-    //     printf("Conditional branch was not taken\n"); 
-    //     printf("IN FETCH    | SAME WORD\n");
-    //     IF_DE.operation.word = EX_MEM.operation.same_jump_word; 
-    //     IF_DE.operation.PC = pipe.PC; 
-    //     if(prints) printf("In Fetch   | word: %0X\n", IF_DE.operation.word);
-
-    //     return; 
-    // }
-
     IF_DE.PC = pipe.PC;          
     IF_DE.operation = initialize_operation(); 
     IF_DE.operation.word = mem_read_32(IF_DE.PC);
@@ -836,8 +700,6 @@ Pipe_Op initialize_operation()
     operation.is_load = false; 
     operation.is_store = false; 
     operation.will_jump = false; 
-    operation.could_jump = false; 
-    operation.same_jump_word = 0; 
     return operation; 
 }
 
@@ -881,7 +743,6 @@ bool decode_B(uint32_t word, uint16_t opcode) {
     }
     imm26 <<= 2;
     IF_DE.operation.address = imm26;
-    IF_DE.operation.could_jump = true;
     return true;
 }
 
@@ -896,7 +757,6 @@ bool decode_CB(uint32_t word, uint16_t opcode) {
     int64_t address = (int64_t) imm19;
     IF_DE.operation.address = address;
     IF_DE.operation.Rt = word & 0x1F;
-    IF_DE.operation.could_jump = true; 
     return true;
 }
 
