@@ -98,6 +98,11 @@ void delay(int milliseconds) {
 
 void pipe_stage_wb()
 {   
+    if (STALL)
+    {
+        EX_MEM.operation.is_bubble = true;
+        STALL = false;
+    }
     if(MEM_WB.operation.is_bubble) {
         if(prints) printf("In WB      | BUBBLE\n");
         return; 
@@ -128,11 +133,6 @@ void pipe_stage_wb()
     }
     if (operation.opcode == 0x6A2) {
         RUN_BIT = FALSE;
-    }
-    if (STALL)
-    {
-        EX_MEM.operation.is_bubble = true;
-        STALL = false;
     }
 
 }
@@ -455,7 +455,7 @@ void pipe_stage_execute()
     EX_MEM.PC = PC; 
     if(prints) printf("In EXECUTE | word: %0X\n", DE_EX.operation.word);
 
-    bp_update(pipe.bp,  DE_EX.PC, PC, operation.will_jump, type == CTYPE);
+    bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
 }
 
 void pipe_stage_decode()

@@ -12,6 +12,8 @@
 
 #include <stdint.h>
 #include "stdbool.h"
+#define PHT_SIZE 256
+#define BTB_SIZE 1024
 
 typedef struct
 {
@@ -23,10 +25,10 @@ typedef struct
      /* BTB */
      int btb_size;
      int btb_bits;
-     uint64_t *btb_tag;
-     uint64_t *btb_dest;
+     uint64_t btb_tag[BTB_SIZE];
+     uint64_t btb_dest[BTB_SIZE];
      bool *btb_valid;
-     bool *btb_cond;
+     bool btb_cond[BTB_SIZE];
 } bp_t;
 
 
