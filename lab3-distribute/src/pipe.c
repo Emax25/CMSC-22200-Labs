@@ -43,7 +43,7 @@ Pipe_Reg_MEMtoWB MEM_WB;
 int RUN_BIT;
 int HLT;
 int STALL;
-static int prints = false; 
+static int prints = true; 
 static int prints2 = false; 
 
 /* static constant list of intruction type tuples */
@@ -72,7 +72,7 @@ void pipe_init()
 
 void pipe_cycle()
 {  
-    // printf("HLT: %0X, STALL: %0X, RUNBIT: %0X\n", HLT, STALL, RUN_BIT);
+    printf("HLT: %0X, STALL: %0X, RUNBIT: %0X\n", HLT, STALL, RUN_BIT);
     pipe_stage_wb();
     if(RUN_BIT) {
         pipe_stage_mem();
@@ -113,13 +113,13 @@ void pipe_stage_wb()
         if(prints) printf("In WB      | BUBBLE\n");
         return; 
     }
-    if(MEM_WB.is_bubble)
-    {   
-        MEM_WB.is_bubble = false;
-        if(prints) printf("In WB      | BUBBLE\n");
+    // if(MEM_WB.is_bubble)
+    // {   
+    //     MEM_WB.is_bubble = false;
+    //     if(prints) printf("In WB      | BUBBLE\n");
 
-        return;
-    }
+    //     return;
+    // }
     if(prints) printf("In WB      | word: %0X\n", MEM_WB.operation.word);
 
     // Update pipe
@@ -149,7 +149,7 @@ void pipe_stage_wb()
     }
     if (STALL)
     {
-        MEM_WB.is_bubble = true;
+        MEM_WB.operation.is_bubble = true;
     }
 
 }
@@ -273,16 +273,16 @@ void pipe_stage_execute()
     if (type == CTYPE) {
         int64_t COND_BR_address = operation.address;
         int8_t Rt = operation.Rt;
-        // printf("COND_BR_address: %0X\n", COND_BR_address);
+        printf("COND_BR_address: %0X\n", COND_BR_address);
         switch(opcode) {
             case 0x5A8 ... 0x5AF:  // CBNZ
-                // printf("CBNZ OLD PC: %0X\n", PC);
-                // printf("Rt: %0X\n", Rt);
-                // printf("reg[Rt]: %0X\n", regs[Rt]);
+                printf("CBNZ OLD PC: %0X\n", PC);
+                printf("Rt: %0X\n", Rt);
+                printf("reg[Rt]: %0X\n", regs[Rt]);
                 if(regs[Rt] != 0) {
-                    // printf("NOT EQUAL TO ZERO!:\n");
+                    printf("NOT EQUAL TO ZERO!:\n");
                     PC = PC + COND_BR_address; 
-                    // printf("NEW PC: %0X!:\n", PC);
+                    printf("NEW PC: %0X!:\n", PC);
 
                     operation.will_jump = true;
                 } else {
@@ -290,7 +290,7 @@ void pipe_stage_execute()
                 }
                 break; 
             case 0x5A0 ... 0x5A7:  // CBZ
-                // printf("CBZ NEW PC: %0X\n", PC);
+                printf("CBZ NEW PC: %0X\n", PC);
                 if(regs[Rt] == 0) {
                     operation.will_jump = true;
                     PC = PC + COND_BR_address; 
@@ -508,7 +508,7 @@ void pipe_stage_execute()
     EX_MEM.PC = PC; 
     if(prints) printf("In EXECUTE | word: %0X\n", DE_EX.operation.word);
 
-    bp_update(pipe.bp,  DE_EX.PC, PC, operation.will_jump, type == CTYPE);
+    bp_update(pipe.bp,  DE_EX.PC, IF_DE.PC, PC, operation.will_jump, type == CTYPE);
 
     // if(EX_MEM.operation.will_jump) {
 
@@ -619,17 +619,17 @@ void forward_MEM_EX(Pipe_Op operation) {
         DE_EX.FLAG_Z = EX_MEM.FLAG_Z; 
     }
     if (DE_EX.operation.type == CTYPE) {
-        // printf("Will need to data forward here! \n"); 
-        // printf("operation.Rt: %0X\n", operation.Rt); 
-        // printf("EX_MEM.operation.Rt: %0X\n", EX_MEM.operation.Rt); 
-        // printf("EX_MEM.operation.Rn: %0X\n", EX_MEM.operation.Rn); 
-        // printf("EX_MEM.operation.Rm: %0X\n", EX_MEM.operation.Rm); 
+        printf("Will need to data forward here! \n"); 
+        printf("operation.Rt: %0X\n", operation.Rt); 
+        printf("EX_MEM.operation.Rt: %0X\n", EX_MEM.operation.Rt); 
+        printf("EX_MEM.operation.Rn: %0X\n", EX_MEM.operation.Rn); 
+        printf("EX_MEM.operation.Rm: %0X\n", EX_MEM.operation.Rm); 
 
         if (DE_EX.operation.Rt == EX_MEM.operation.Rt) {
-            // printf("operation.Rt, %0X\n", operation.Rt);
-            // printf("EX_MEM.operation.Rt, %0X\n", EX_MEM.operation.Rt);
+            printf("operation.Rt, %0X\n", operation.Rt);
+            printf("EX_MEM.operation.Rt, %0X\n", EX_MEM.operation.Rt);
 
-            // printf("SETTING DE_EX.REGS[DE_EX.operation.Rt]: %0X\n", EX_MEM.REGS[operation.Rt]); 
+            printf("SETTING DE_EX.REGS[DE_EX.operation.Rt]: %0X\n", EX_MEM.REGS[operation.Rt]); 
             DE_EX.REGS[DE_EX.operation.Rt] = EX_MEM.REGS[operation.Rt]; 
         }
     }

@@ -47,13 +47,19 @@ void bp_predict(bp_t *bp, uint64_t *PC)
     else *PC += 4;
 }
 
-void bp_update(bp_t *bp, uint64_t PC, uint64_t target, bool taken, bool is_cond) 
+void bp_update(bp_t *bp, uint64_t PC, uint64_t prediction, uint64_t target, bool taken, bool is_cond) 
 {    
     if (is_cond) {
         int pht_index = (bp->ghr ^ ((PC >> 2) & 0xFF));
-
-        if (taken && bp->pht[pht_index] < 3) bp->pht[pht_index]++;
-        else if (!taken && bp->pht[pht_index] > 0) bp->pht[pht_index]--;
+        
+        if (prediction == target){
+            if (taken && bp->pht[pht_index] < 3) bp->pht[pht_index]++;
+            else if (!taken && bp->pht[pht_index] > 0) bp->pht[pht_index]--;
+        }
+        else{
+            if (taken && bp->pht[pht_index] > 0) bp->pht[pht_index]--;
+            else if (!taken && bp->pht[pht_index] < 0) bp->pht[pht_index]++;
+        }
         bp->ghr = ((bp->ghr << 1) | (taken ? 1 : 0)) & 0xFF;
     }
     else if (!taken) target = PC + 4; 
