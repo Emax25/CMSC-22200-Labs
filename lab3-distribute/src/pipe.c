@@ -32,7 +32,7 @@ Pipe_Reg_MEMtoWB MEM_WB;
 int RUN_BIT;
 int HLT;
 int STALL;
-static int prints = true; 
+static int prints = false; 
 static int prints2 = false; 
 
 /* static constant list of intruction type tuples */
@@ -71,6 +71,9 @@ void pipe_cycle()
             pipe_stage_fetch();
             incr_PC();
         }
+    }
+    else{
+        free_pipeline();
     }
     if (prints) printf("Pipe Cycle: %0lX\n", pipe.PC); 
 }
@@ -777,4 +780,10 @@ bool decode_I(uint32_t word, uint16_t opcode) {
     IF_DE.operation.Rn = (word >> 5) & 0x1F;
     IF_DE.operation.Rt = word & 0x1F;
     return true;
+}
+
+void free_pipeline(){
+    bp_free(pipe.bp);
+    free(pipe.bp);
+    pipe.bp = NULL;
 }

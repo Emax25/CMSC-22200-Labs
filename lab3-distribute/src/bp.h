@@ -34,5 +34,6 @@ void bp_init(bp_t *bp);
 void bp_predict(bp_t *bp, uint64_t *PC);
 void bp_update(bp_t *bp, uint64_t PC, uint64_t target, bool taken, bool is_cond);
 bool predicted(uint64_t prediction, uint64_t target,  bool taken);
+void bp_free(bp_t *bp);
 
 #endif

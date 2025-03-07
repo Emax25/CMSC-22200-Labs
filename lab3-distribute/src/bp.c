@@ -76,3 +76,11 @@ bool predicted(uint64_t prediction, uint64_t target,  bool taken)
     }
     return prediction == target;
 }
+
+void bp_free(bp_t *bp) {
+    free(bp->pht);
+    free(bp->btb_tag);
+    free(bp->btb_dest);
+    free(bp->btb_valid);
+    free(bp->btb_cond);
+}
