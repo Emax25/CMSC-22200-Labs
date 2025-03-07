@@ -151,7 +151,7 @@ void pipe_stage_mem()
 
     forward_MEM_EX(operation);
 
-    if (!predicted(DE_EX.PC, PC, operation.will_jump)) {
+    if (!predicted(DE_EX.PC, PC, operation.will_jump) && PC != 0) {
         pipe.PC = PC;
         flush_pipeline();
     }
