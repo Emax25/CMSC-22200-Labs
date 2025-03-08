@@ -66,11 +66,8 @@ void bp_update(bp_t *bp, uint64_t PC, uint64_t target, bool taken, bool is_cond)
     }
 }
 
-bool predicted(uint64_t prediction, uint64_t target,  bool taken)
+bool predicted(uint64_t prediction, uint64_t target)
 {
-    if (!taken){
-        target += 4; 
-    }
     return prediction == target;
 }
 

@@ -97,6 +97,7 @@ void cache_insert(cache_t *c, uint64_t addr){
     }
 
     set[lru_idx].tag = tag;
+    set[lru_idx].valid = true;
     set[lru_idx].last_used = c->accesses;
 }
 

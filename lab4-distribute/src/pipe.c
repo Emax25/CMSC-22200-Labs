@@ -32,7 +32,7 @@ Pipe_Reg_MEMtoWB MEM_WB;
 int RUN_BIT;
 int HLT;
 int STALL;
-static int prints = false; 
+static int prints = true; 
 static int prints2 = false; 
 
 /* static constant list of intruction type tuples */
@@ -169,8 +169,13 @@ void pipe_stage_mem()
 
     forward_MEM_EX(operation);
 
-    if (!predicted(DE_EX.PC, PC, operation.will_jump) && PC != 0) {
-        pipe.PC = PC;
+    uint64_t target = PC;
+    if (!operation.will_jump) target += 4;
+
+    if (!predicted(DE_EX.PC, target) && PC != 0) {
+        pipe.icache->waiting = false;
+        pipe.icache->cycles = 0;
+        pipe.PC = target;
         flush_pipeline();
     }
 
@@ -602,7 +607,6 @@ void pipe_stage_fetch()
     IF_DE.operation.PC = IF_DE.PC; 
     if(prints) printf("In Fetch   | word: %0X\n", IF_DE.operation.word);
 }
-
 
 bool find_operation(uint8_t type, uint16_t opcode, uint32_t word)
 {  
