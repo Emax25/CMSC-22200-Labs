@@ -32,7 +32,7 @@ Pipe_Reg_MEMtoWB MEM_WB;
 int RUN_BIT;
 int HLT;
 int STALL;
-static int prints = true; 
+static int prints = false; 
 static int prints2 = false; 
 
 /* static constant list of intruction type tuples */
@@ -72,6 +72,9 @@ void pipe_cycle()
             incr_PC();
         }
     }
+    else{
+        free_pipeline();
+    }
     if (prints) printf("Pipe Cycle: %0lX\n", pipe.PC); 
 }
 
@@ -95,6 +98,11 @@ void delay(int milliseconds) {
 
 void pipe_stage_wb()
 {   
+    if (STALL)
+    {
+        EX_MEM.operation.is_bubble = true;
+        STALL = false;
+    }
     if(MEM_WB.operation.is_bubble) {
         if(prints) printf("In WB      | BUBBLE\n");
         return; 
@@ -126,11 +134,6 @@ void pipe_stage_wb()
     if (operation.opcode == 0x6A2) {
         RUN_BIT = FALSE;
     }
-    if (STALL)
-    {
-        EX_MEM.operation.is_bubble = true;
-        STALL = false;
-    }
 
 }
 
@@ -151,7 +154,7 @@ void pipe_stage_mem()
 
     forward_MEM_EX(operation);
 
-    if (!predicted(DE_EX.PC, PC, operation.will_jump)) {
+    if (!predicted(DE_EX.PC, PC, operation.will_jump) && PC != 0) {
         pipe.PC = PC;
         flush_pipeline();
     }
@@ -452,7 +455,7 @@ void pipe_stage_execute()
     EX_MEM.PC = PC; 
     if(prints) printf("In EXECUTE | word: %0X\n", DE_EX.operation.word);
 
-    bp_update(pipe.bp,  DE_EX.PC, PC, operation.will_jump, type == CTYPE);
+    bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
 }
 
 void pipe_stage_decode()
@@ -777,4 +780,10 @@ bool decode_I(uint32_t word, uint16_t opcode) {
     IF_DE.operation.Rn = (word >> 5) & 0x1F;
     IF_DE.operation.Rt = word & 0x1F;
     return true;
+}
+
+void free_pipeline(){
+    bp_free(pipe.bp);
+    free(pipe.bp);
+    pipe.bp = NULL;
 }
