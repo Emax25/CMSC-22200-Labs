@@ -21,10 +21,7 @@ void bp_init(bp_t *bp)
 
     bp->btb_size = BTB_SIZE;
     bp->btb_bits = 10;
-    // bp->btb_tag = calloc(BTB_SIZE, sizeof(uint64_t));
-    // bp->btb_dest = calloc(BTB_SIZE, sizeof(uint64_t));
     bp->btb_valid = calloc(BTB_SIZE, sizeof(bool));
-    // bp->btb_cond = calloc(BTB_SIZE, sizeof(bool));
 }
 
 void bp_predict(bp_t *bp, uint64_t *PC)
@@ -79,8 +76,5 @@ bool predicted(uint64_t prediction, uint64_t target,  bool taken)
 
 void bp_free(bp_t *bp) {
     free(bp->pht);
-    // free(bp->btb_tag);
-    // free(bp->btb_dest);
     free(bp->btb_valid);
-    // free(bp->btb_cond);
 }
