@@ -81,14 +81,15 @@ void pipe_cycle()
 }
 
 void flush_pipeline() {
+    EX_MEM.flushed = true;
     IF_DE.operation = initialize_operation();
     IF_DE.operation.is_bubble = true;
-    DE_EX.operation = initialize_operation();
-    DE_EX.operation.is_bubble = true;
+    // DE_EX.operation = initialize_operation();
+    // DE_EX.operation.is_bubble = true;
 }
 
 void incr_PC(){
-    if (!HLT && !pipe.icache->waiting) { 
+    if (!HLT && !pipe.icache->waiting && !EX_MEM.flushed) { 
         bp_predict(pipe.bp, &pipe.PC);
     }
 }
@@ -143,9 +144,10 @@ void pipe_stage_mem()
 {
     Pipe_Op operation = EX_MEM.operation;
     int64_t *regs = EX_MEM.REGS; 
-
+    EX_MEM.flushed = false;
     if (pipe.dcache->waiting){
         pipe.dcache->cycles--;
+        pipe.icache->cycles--;
         if (pipe.dcache->cycles <= 0){
             pipe.dcache->waiting = false;
             EX_MEM.operation.is_bubble = false;
@@ -172,15 +174,15 @@ void pipe_stage_mem()
 
     forward_MEM_EX(operation);
 
-    uint64_t target = PC;
-    if (!operation.will_jump) target += 4;
+    // uint64_t target = PC;
+    // if (!operation.will_jump) target += 4;
 
-    if (!predicted(DE_EX.PC, target) && PC != 0) {
-        pipe.icache->waiting = false;
-        pipe.icache->cycles = 0;
-        pipe.PC = target;
-        flush_pipeline();
-    }
+    // if (!predicted(DE_EX.PC, target) && PC != 0) {
+    //     pipe.icache->waiting = false;
+    //     pipe.icache->cycles = 0;
+    //     pipe.PC = target;
+    //     flush_pipeline();
+    // }
 
     if (type == DTYPE) {
         int64_t DT_address = operation.address;
@@ -266,6 +268,7 @@ void pipe_stage_mem()
 
 void pipe_stage_execute()
 {
+    EX_MEM.flushed = false;
     if (DE_EX.operation.is_bubble){
         EX_MEM.operation = DE_EX.operation; 
         if(prints) printf("In EXECUTE | BUBBLE\n");
@@ -487,6 +490,16 @@ void pipe_stage_execute()
     if(prints) printf("In EXECUTE | word: %0X\n", DE_EX.operation.word);
 
     bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
+
+    uint64_t target = PC;
+    if (!operation.will_jump) target += 4;
+
+    if (!predicted(IF_DE.PC, target) && PC != 0) {
+        pipe.icache->waiting = false;
+        pipe.icache->cycles = 0;
+        pipe.PC = target;
+        flush_pipeline();
+    }
 }
 
 void pipe_stage_decode()
@@ -585,6 +598,10 @@ void forward_WB_EX(Pipe_Op operation) {
 
 void pipe_stage_fetch()
 {
+    if (EX_MEM.flushed){
+        IF_DE.operation.is_bubble = true;
+        return;
+    }
     if (pipe.icache->waiting){
         pipe.icache->cycles--;
         if (pipe.icache->cycles <= 0){

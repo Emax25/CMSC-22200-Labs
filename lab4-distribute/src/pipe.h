@@ -81,6 +81,7 @@ typedef struct Pipe_Reg_EXtoMEM {
 	uint64_t PC;
 	bool willJump; 
 	bool is_bubble;
+    bool flushed;
 } Pipe_Reg_EXtoMEM;
 
 /* Represents the pipeline register between the MEM and WB stage. */
