@@ -32,6 +32,6 @@ typedef struct
 cache_t *cache_new(int sets, int ways);
 void cache_destroy(cache_t *c);
 int cache_update(cache_t *c, uint64_t addr);
-void cache_insert(cache_t *c, uint16_t addr);
+void cache_insert(cache_t *c, uint64_t addr);
 
 #endif

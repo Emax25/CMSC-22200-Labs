@@ -62,13 +62,10 @@ int cache_update(cache_t *c, uint64_t addr)
         }
     }
 
-    int lru_idx = 0;
-    uint64_t last_used = set[0].last_used;
-
     return 1; 
 }
 
-void cache_insert(cache_t *c, uint16_t addr){
+void cache_insert(cache_t *c, uint64_t addr){
     int set_idx;
     uint64_t tag;
     
