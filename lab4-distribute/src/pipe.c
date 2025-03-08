@@ -32,7 +32,7 @@ Pipe_Reg_MEMtoWB MEM_WB;
 int RUN_BIT;
 int HLT;
 int STALL;
-static int prints = true; 
+static int prints = false; 
 static int prints2 = false; 
 
 /* static constant list of intruction type tuples */
@@ -141,12 +141,17 @@ void pipe_stage_wb()
 
 void pipe_stage_mem()
 {
+    Pipe_Op operation = EX_MEM.operation;
+    int64_t *regs = EX_MEM.REGS; 
+
     if (pipe.dcache->waiting){
         pipe.dcache->cycles--;
         if (pipe.dcache->cycles <= 0){
             pipe.dcache->waiting = false;
             EX_MEM.operation.is_bubble = false;
-            cache_insert(pipe.dcache, pipe.PC);
+            int64_t DT_address = operation.address;
+            uint8_t Rn = operation.Rn;
+            cache_insert(pipe.dcache, regs[Rn] + DT_address);
         }
         else{
             MEM_WB.operation.is_bubble = true;
@@ -161,11 +166,9 @@ void pipe_stage_mem()
         return;
     }
 
-    Pipe_Op operation = EX_MEM.operation; 
     uint64_t PC = EX_MEM.PC; 
     uint8_t type = operation.type; 
     uint16_t opcode = operation.opcode;
-    int64_t *regs = EX_MEM.REGS; 
 
     forward_MEM_EX(operation);
 
@@ -247,7 +250,7 @@ void pipe_stage_mem()
         if (cache_update(pipe.dcache, regs[Rn] + DT_address) == 1){
             pipe.dcache->waiting = true;
             MEM_WB.operation.is_bubble = true;
-            pipe.dcache->cycles = 51;
+            pipe.dcache->cycles = 50;
             STALL = true;
             return;
         }
@@ -597,7 +600,7 @@ void pipe_stage_fetch()
     if (cache_update(pipe.icache, pipe.PC) == 1){
         pipe.icache->waiting = true;
         IF_DE.operation.is_bubble = true;
-        pipe.icache->cycles = 51;
+        pipe.icache->cycles = 50;
         return;
     }
 
