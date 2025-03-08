@@ -11,6 +11,7 @@
 #define _PIPE_H_
 
 #include "bp.h"
+#include "cache.h"
 #include "shell.h"
 #include "stdbool.h"
 #include <limits.h>
@@ -33,7 +34,6 @@ typedef struct Pipe_Op {
 	bool will_jump;
 	bool is_bubble; 
 	uint32_t PC; 
-	// STAGE
 } Pipe_Op;
 
 /* Represents the current state of the pipeline. */
@@ -50,6 +50,8 @@ typedef struct Pipe_State {
     
 	/* branch predictor */
     bp_t *bp; 
+    cache_t *icache;
+    cache_t *dcache;
 } Pipe_State;
 
 /* Represents the pipeline register between the IF and DE stage. */

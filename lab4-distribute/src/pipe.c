@@ -57,6 +57,8 @@ void pipe_init()
     initialize_pipe_registers();
     pipe.bp = malloc(sizeof(bp_t));
     bp_init(pipe.bp);
+    pipe.icache = cache_new(64, 4);
+    pipe.dcache = cache_new(256, 8);
 }
 
 void pipe_cycle()
@@ -86,7 +88,7 @@ void flush_pipeline() {
 }
 
 void incr_PC(){
-    if (!HLT) { 
+    if (!HLT && !pipe.icache->waiting) { 
         bp_predict(pipe.bp, &pipe.PC);
     }
 }
@@ -139,6 +141,19 @@ void pipe_stage_wb()
 
 void pipe_stage_mem()
 {
+    if (pipe.dcache->waiting){
+        pipe.dcache->cycles--;
+        if (pipe.dcache->cycles <= 0){
+            pipe.dcache->waiting = false;
+            EX_MEM.operation.is_bubble = false;
+            cache_insert(pipe.dcache, pipe.PC);
+        }
+        else{
+            MEM_WB.operation.is_bubble = true;
+            STALL = true;
+            return;
+        }
+    }
     if (EX_MEM.operation.is_bubble) {
         MEM_WB.operation = EX_MEM.operation; 
         if(prints) printf("In MEM     | BUBBLE\n");
@@ -147,10 +162,10 @@ void pipe_stage_mem()
     }
 
     Pipe_Op operation = EX_MEM.operation; 
+    uint64_t PC = EX_MEM.PC; 
     uint8_t type = operation.type; 
     uint16_t opcode = operation.opcode;
-    int64_t *regs = EX_MEM.REGS;
-    uint64_t PC = EX_MEM.PC; 
+    int64_t *regs = EX_MEM.REGS; 
 
     forward_MEM_EX(operation);
 
@@ -158,7 +173,6 @@ void pipe_stage_mem()
         pipe.PC = PC;
         flush_pipeline();
     }
-
 
     if (type == DTYPE) {
         int64_t DT_address = operation.address;
@@ -224,6 +238,15 @@ void pipe_stage_mem()
                 printf("ERROR: Unknown Instruction in DTYPE\n");
                 RUN_BIT = FALSE;
         }
+
+        if (cache_update(pipe.dcache, regs[Rn] + DT_address) == 1){
+            pipe.dcache->waiting = true;
+            MEM_WB.operation.is_bubble = true;
+            pipe.dcache->cycles = 51;
+            STALL = true;
+            return;
+        }
+
     }
     memcpy(MEM_WB.REGS, regs, ARM_REGS * sizeof(int64_t));
     MEM_WB.operation = operation; 
@@ -554,7 +577,26 @@ void forward_WB_EX(Pipe_Op operation) {
 
 void pipe_stage_fetch()
 {
-    IF_DE.PC = pipe.PC;          
+    if (pipe.icache->waiting){
+        pipe.icache->cycles--;
+        if (pipe.icache->cycles <= 0){
+            pipe.icache->waiting = false;
+            cache_insert(pipe.icache, pipe.PC);
+        }
+        else{
+            IF_DE.operation.is_bubble = true;
+            return;
+        }
+    }
+
+    if (cache_update(pipe.icache, pipe.PC) == 1){
+        pipe.icache->waiting = true;
+        IF_DE.operation.is_bubble = true;
+        pipe.icache->cycles = 51;
+        return;
+    }
+
+    IF_DE.PC = pipe.PC;  
     IF_DE.operation = initialize_operation(); 
     IF_DE.operation.word = mem_read_32(IF_DE.PC);
     IF_DE.operation.PC = IF_DE.PC; 
@@ -786,4 +828,6 @@ void free_pipeline(){
     bp_free(pipe.bp);
     free(pipe.bp);
     pipe.bp = NULL;
+    cache_destroy(pipe.icache);
+    cache_destroy(pipe.dcache);
 }
