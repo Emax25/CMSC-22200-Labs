@@ -32,7 +32,7 @@ Pipe_Reg_MEMtoWB MEM_WB;
 int RUN_BIT;
 int HLT;
 int STALL;
-static int prints = false; 
+static int prints = true; 
 static int prints2 = false; 
 
 /* static constant list of intruction type tuples */
@@ -495,10 +495,13 @@ void pipe_stage_execute()
     if (!operation.will_jump) target += 4;
 
     if (!predicted(IF_DE.PC, target) && PC != 0) {
+        // pipe.icache->waiting = false;
+        // pipe.icache->cycles = 0;
+        // pipe.PC = target;
+        flush_pipeline();
         pipe.icache->waiting = false;
         pipe.icache->cycles = 0;
         pipe.PC = target;
-        flush_pipeline();
     }
 }
 
