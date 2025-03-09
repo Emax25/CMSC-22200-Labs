@@ -160,7 +160,7 @@ void pipe_stage_mem()
         // }
         if (pipe.dcache->cycles <= 0){
             pipe.dcache->waiting = false;
-            EX_MEM.operation.is_bubble = false;
+            operation.is_bubble = false;
             int64_t DT_address = operation.address;
             uint8_t Rn = operation.Rn;
             cache_insert(pipe.dcache, regs[Rn] + DT_address);
@@ -171,7 +171,7 @@ void pipe_stage_mem()
             return;
         }
     }
-    if (EX_MEM.operation.is_bubble) {
+    if (operation.is_bubble) {
         MEM_WB.operation = EX_MEM.operation; 
         if(prints) printf("In MEM     | BUBBLE\n");
 
@@ -189,6 +189,14 @@ void pipe_stage_mem()
         uint8_t op = operation.misc;
         uint8_t Rn = operation.Rn;
         uint8_t Rt = operation.Rt;
+
+        if (cache_update(pipe.dcache, regs[Rn] + DT_address) == 1){
+            pipe.dcache->waiting = true;
+            MEM_WB.operation.is_bubble = true;
+            pipe.dcache->cycles = 50;
+            // STALL = true;
+            return;
+        }
 
         switch(opcode) {
             case 0x7C2:  // LDUR
@@ -247,14 +255,6 @@ void pipe_stage_mem()
             default:
                 printf("ERROR: Unknown Instruction in DTYPE\n");
                 RUN_BIT = FALSE;
-        }
-
-        if (cache_update(pipe.dcache, regs[Rn] + DT_address) == 1){
-            pipe.dcache->waiting = true;
-            MEM_WB.operation.is_bubble = true;
-            pipe.dcache->cycles = 50;
-            // STALL = true;
-            return;
         }
 
     }
