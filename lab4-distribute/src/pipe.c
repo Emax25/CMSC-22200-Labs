@@ -32,7 +32,7 @@ Pipe_Reg_MEMtoWB MEM_WB;
 int RUN_BIT;
 int HLT;
 int STALL;
-static int prints = false; 
+static int prints = true; 
 static int prints2 = false; 
 
 /* static constant list of intruction type tuples */
@@ -72,6 +72,9 @@ void pipe_cycle()
             pipe_stage_decode();
             pipe_stage_fetch();
             incr_PC();
+        }
+        else if (pipe.icache->waiting){
+            pipe.icache->cycles--;
         }
     }
     else{
@@ -147,13 +150,14 @@ void pipe_stage_mem()
     EX_MEM.flushed = false;
     if (pipe.dcache->waiting){
         pipe.dcache->cycles--;
-        if (pipe.icache->waiting){
-            pipe.icache->cycles--;
-            if (pipe.icache->cycles <= 0){
-                pipe.icache->waiting = false;
-                cache_insert(pipe.icache, pipe.PC);
-            }
-        }
+        pipe.icache->cycles--;
+        // if (pipe.icache->waiting){
+        //     pipe.icache->cycles--;
+        //     if (pipe.icache->cycles <= 0){
+        //         pipe.icache->waiting = false;
+        //         cache_insert(pipe.icache, pipe.PC);
+        //     }
+        // }
         if (pipe.dcache->cycles <= 0){
             pipe.dcache->waiting = false;
             EX_MEM.operation.is_bubble = false;
