@@ -174,16 +174,6 @@ void pipe_stage_mem()
 
     forward_MEM_EX(operation);
 
-    // uint64_t target = PC;
-    // if (!operation.will_jump) target += 4;
-
-    // if (!predicted(DE_EX.PC, target) && PC != 0) {
-    //     pipe.icache->waiting = false;
-    //     pipe.icache->cycles = 0;
-    //     pipe.PC = target;
-    //     flush_pipeline();
-    // }
-
     if (type == DTYPE) {
         int64_t DT_address = operation.address;
         uint8_t op = operation.misc;
@@ -493,6 +483,7 @@ void pipe_stage_execute()
 
     uint64_t target = PC;
     if (!operation.will_jump) target += 4;
+    // printf("TARGET = %0x\n PREDICTED = %0x\n NO PLUS %0x\n", target, IF_DE.PC, PC);
 
     if (!predicted(IF_DE.PC, target) && PC != 0) {
         flush_pipeline();
