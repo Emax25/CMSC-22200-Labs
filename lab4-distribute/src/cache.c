@@ -101,3 +101,9 @@ void cache_insert(cache_t *c, uint64_t addr){
     set[lru_idx].last_used = c->accesses;
 }
 
+bool same_block(cache_t *c, uint64_t addr, uint64_t target){
+    int targ_set = (target>> 5) & 0x3F;
+    int curr_set = (addr >> 5) & 0x3F;
+    
+    return targ_set == curr_set;
+}

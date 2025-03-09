@@ -33,5 +33,6 @@ cache_t *cache_new(int sets, int ways);
 void cache_destroy(cache_t *c);
 int cache_update(cache_t *c, uint64_t addr);
 void cache_insert(cache_t *c, uint64_t addr);
+bool same_block(cache_t *c, uint64_t addr, uint64_t target);
 
 #endif
