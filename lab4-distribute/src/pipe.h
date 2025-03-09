@@ -58,6 +58,9 @@ typedef struct Pipe_State {
 typedef struct Pipe_Reg_IFtoDE {
 	Pipe_Op operation; 
 	uint64_t PC;
+    uint64_t stalled_PC;
+    bool stalled;
+    bool sec_stall;
 	bool is_bubble; 
 } Pipe_Reg_IFtoDE;
 
@@ -70,6 +73,7 @@ typedef struct Pipe_Reg_DEtoEX {
 	uint64_t PC;
 	bool isJump; 
 	bool is_bubble;
+    bool stalled;
 } Pipe_Reg_DEtoEX;
 
 /* Represents the pipeline register between the EX and MEM stage. */
@@ -82,6 +86,7 @@ typedef struct Pipe_Reg_EXtoMEM {
 	bool willJump; 
 	bool is_bubble;
     bool flushed;
+    bool stalled;
 } Pipe_Reg_EXtoMEM;
 
 /* Represents the pipeline register between the MEM and WB stage. */

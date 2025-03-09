@@ -92,7 +92,8 @@ void flush_pipeline() {
 }
 
 void incr_PC(){
-    if (!HLT && !pipe.icache->waiting && !EX_MEM.flushed) { 
+    if (IF_DE.sec_stall) IF_DE.sec_stall = false;
+    else if (!HLT && !pipe.icache->waiting && !EX_MEM.flushed) { 
         bp_predict(pipe.bp, &pipe.PC);
     }
 }
@@ -146,18 +147,10 @@ void pipe_stage_wb()
 void pipe_stage_mem()
 {
     Pipe_Op operation = EX_MEM.operation;
-    int64_t *regs = EX_MEM.REGS; 
+    int64_t *regs = EX_MEM.REGS;
     EX_MEM.flushed = false;
     if (pipe.dcache->waiting){
         pipe.dcache->cycles--;
-        // pipe.icache->cycles--;
-        // if (pipe.icache->waiting){
-        //     pipe.icache->cycles--;
-        //     if (pipe.icache->cycles <= 0){
-        //         pipe.icache->waiting = false;
-        //         cache_insert(pipe.icache, pipe.PC);
-        //     }
-        // }
         if (pipe.dcache->cycles <= 0){
             pipe.dcache->waiting = false;
             operation.is_bubble = false;
@@ -177,12 +170,12 @@ void pipe_stage_mem()
 
         return;
     }
-
+ 
     uint64_t PC = EX_MEM.PC; 
     uint8_t type = operation.type; 
     uint16_t opcode = operation.opcode;
 
-    // forward_MEM_EX(operation);
+    if (!EX_MEM.stalled) forward_MEM_EX(operation);
 
     if (type == DTYPE) {
         int64_t DT_address = operation.address;
@@ -194,7 +187,8 @@ void pipe_stage_mem()
             pipe.dcache->waiting = true;
             MEM_WB.operation.is_bubble = true;
             pipe.dcache->cycles = 50;
-            // STALL = true;
+            STALL = false;
+            EX_MEM.stalled = true;
             return;
         }
 
@@ -258,7 +252,8 @@ void pipe_stage_mem()
         }
 
     }
-    forward_MEM_EX(operation);
+    
+    EX_MEM.stalled = false;
     memcpy(MEM_WB.REGS, regs, ARM_REGS * sizeof(int64_t));
     MEM_WB.operation = operation; 
     MEM_WB.PC = PC; 
@@ -271,7 +266,7 @@ void pipe_stage_execute()
 {
     EX_MEM.flushed = false;
     if (DE_EX.operation.is_bubble){
-        EX_MEM.operation = DE_EX.operation; 
+        if (!pipe.dcache->waiting) EX_MEM.operation = DE_EX.operation; 
         if(prints) printf("In EXECUTE | BUBBLE\n");
         return;
     }
@@ -482,39 +477,46 @@ void pipe_stage_execute()
         }
     }
 
+    if(prints) printf("In EXECUTE | word: %0X\n", operation.word);
+
+    if (!DE_EX.stalled){
+        bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
+
+        uint64_t target = PC;
+        if (!operation.will_jump) target += 4;
+
+        if (!predicted(IF_DE.PC, target) && PC != 0) {
+            flush_pipeline();
+            if (pipe.icache->waiting){
+                if (!same_block(pipe.icache, pipe.PC, target)){
+                    pipe.icache->waiting = false;
+                    pipe.icache->cycles = 0;
+                }
+                else{
+                    EX_MEM.flushed = false;
+                }
+            }
+            pipe.PC = target;
+        }
+    }
+
+    DE_EX.stalled = true;
+
+    if (pipe.dcache->waiting) return; 
+
+    DE_EX.stalled = false;
     memcpy(EX_MEM.REGS, regs, ARM_REGS * sizeof(int64_t));
     EX_MEM.REGS[31] = 0;
     EX_MEM.operation = operation; 
     EX_MEM.FLAG_N = FLAG_N; 
     EX_MEM.FLAG_Z = FLAG_Z; 
     EX_MEM.PC = PC; 
-    if(prints) printf("In EXECUTE | word: %0X\n", DE_EX.operation.word);
-
-    bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
-
-    uint64_t target = PC;
-    if (!operation.will_jump) target += 4;
-    // printf("TARGET = %0x\n PREDICTED = %0x\n NO PLUS %0x\n", target, IF_DE.PC, PC);
-
-    if (!predicted(IF_DE.PC, target) && PC != 0) {
-        flush_pipeline();
-        if (pipe.icache->waiting){
-            if (!same_block(pipe.icache, pipe.PC, target)){
-                pipe.icache->waiting = false;
-                pipe.icache->cycles = 0;
-            }
-            else{
-                EX_MEM.flushed = false;
-            }
-        }
-        pipe.PC = target;
-    }
 }
 
 void pipe_stage_decode()
 {
     if (IF_DE.operation.is_bubble){
-        DE_EX.operation = IF_DE.operation; 
+        if (!pipe.dcache->waiting) DE_EX.operation = IF_DE.operation; 
         if(prints) printf("In DECODE  | BUBBLE\n");
         return;
     }
@@ -537,12 +539,15 @@ void pipe_stage_decode()
             break; 
         }
     }
+    
+    if(prints) printf("In DECODE  | word: %0X, opcode: %0X\n", word, opcode);
+    if (pipe.dcache->waiting) return;
+
     memcpy(DE_EX.REGS, pipe.REGS, ARM_REGS * sizeof(int64_t));
     DE_EX.PC = IF_DE.PC; 
     DE_EX.FLAG_N = pipe.FLAG_N;
     DE_EX.FLAG_Z = pipe.FLAG_Z;
     DE_EX.operation = IF_DE.operation;
-    if(prints) printf("In DECODE  | word: %0X, opcode: %0X\n", DE_EX.operation.word, DE_EX.operation.opcode);
 }
 
 void forward_MEM_EX(Pipe_Op operation) {
@@ -623,14 +628,32 @@ void pipe_stage_fetch()
         }
     }
 
+    if (IF_DE.stalled){
+        IF_DE.PC = IF_DE.stalled_PC;
+        IF_DE.sec_stall = true;
+        IF_DE.stalled = false;
+    }
+
     if (cache_update(pipe.icache, pipe.PC) == 1){
         pipe.icache->waiting = true;
         IF_DE.operation.is_bubble = true;
         pipe.icache->cycles = 50;
         return;
     }
+    else IF_DE.PC = pipe.PC;  
 
-    IF_DE.PC = pipe.PC;  
+    if (pipe.dcache->waiting){
+        IF_DE.stalled_PC = pipe.PC;
+        IF_DE.stalled = true;
+        return;
+    } 
+
+    // if (IF_DE.stalled){
+    //     IF_DE.PC = IF_DE.stalled_PC;
+    //     IF_DE.sec_stall = true;
+    //     IF_DE.stalled = false;
+    // }
+
     IF_DE.operation = initialize_operation(); 
     IF_DE.operation.word = mem_read_32(IF_DE.PC);
     IF_DE.operation.PC = IF_DE.PC; 
