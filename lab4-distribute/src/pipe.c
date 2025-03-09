@@ -147,7 +147,7 @@ void pipe_stage_mem()
     EX_MEM.flushed = false;
     if (pipe.dcache->waiting){
         pipe.dcache->cycles--;
-        pipe.icache->cycles--;
+        // pipe.icache->cycles--;
         if (pipe.dcache->cycles <= 0){
             pipe.dcache->waiting = false;
             EX_MEM.operation.is_bubble = false;
