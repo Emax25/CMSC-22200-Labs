@@ -37,7 +37,6 @@ void cache_destroy(cache_t *c)
     free(c);
 }
 
-
 int cache_update(cache_t *c, uint64_t addr)
 {
     int set_idx;
