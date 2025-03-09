@@ -150,7 +150,7 @@ void pipe_stage_mem()
     EX_MEM.flushed = false;
     if (pipe.dcache->waiting){
         pipe.dcache->cycles--;
-        pipe.icache->cycles--;
+        // pipe.icache->cycles--;
         // if (pipe.icache->waiting){
         //     pipe.icache->cycles--;
         //     if (pipe.icache->cycles <= 0){
@@ -182,7 +182,7 @@ void pipe_stage_mem()
     uint8_t type = operation.type; 
     uint16_t opcode = operation.opcode;
 
-    forward_MEM_EX(operation);
+    // forward_MEM_EX(operation);
 
     if (type == DTYPE) {
         int64_t DT_address = operation.address;
@@ -253,11 +253,12 @@ void pipe_stage_mem()
             pipe.dcache->waiting = true;
             MEM_WB.operation.is_bubble = true;
             pipe.dcache->cycles = 50;
-            STALL = true;
+            // STALL = true;
             return;
         }
 
     }
+    forward_MEM_EX(operation);
     memcpy(MEM_WB.REGS, regs, ARM_REGS * sizeof(int64_t));
     MEM_WB.operation = operation; 
     MEM_WB.PC = PC; 
