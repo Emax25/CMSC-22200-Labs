@@ -75,6 +75,10 @@ void pipe_cycle()
         }
         else if (pipe.icache->waiting){
             pipe.icache->cycles--;
+            if (pipe.icache->cycles <= 0){
+                pipe.icache->waiting = false;
+                cache_insert(pipe.icache, IF_DE.PC);
+            }
         }
     }
     else{
@@ -480,15 +484,15 @@ void pipe_stage_execute()
     if(prints) printf("In EXECUTE | word: %0X\n", operation.word);
 
     if (!DE_EX.stalled){
-        bp_update(pipe.bp, DE_EX.PC, PC, operation.will_jump, type == CTYPE);
-
         uint64_t target = PC;
         if (!operation.will_jump) target += 4;
+
+        bp_update(pipe.bp, DE_EX.PC, target, operation.will_jump, type == CTYPE);
 
         if (!predicted(IF_DE.PC, target) && PC != 0) {
             flush_pipeline();
             if (pipe.icache->waiting){
-                if (!same_block(pipe.icache, pipe.PC, target)){
+                if (!same_block(pipe.icache, IF_DE.PC, target)){
                     pipe.icache->waiting = false;
                     pipe.icache->cycles = 0;
                 }
@@ -616,11 +620,18 @@ void pipe_stage_fetch()
         IF_DE.operation.is_bubble = true;
         return;
     }
+    if (IF_DE.stalled){
+        IF_DE.PC = IF_DE.stalled_PC;
+        IF_DE.sec_stall = true;
+        IF_DE.stalled = false;
+    }
+    else IF_DE.PC = pipe.PC; 
+
     if (pipe.icache->waiting){
         pipe.icache->cycles--;
         if (pipe.icache->cycles <= 0){
             pipe.icache->waiting = false;
-            cache_insert(pipe.icache, pipe.PC);
+            cache_insert(pipe.icache, IF_DE.PC);
         }
         else{
             IF_DE.operation.is_bubble = true;
@@ -628,19 +639,12 @@ void pipe_stage_fetch()
         }
     }
 
-    if (IF_DE.stalled){
-        IF_DE.PC = IF_DE.stalled_PC;
-        IF_DE.sec_stall = true;
-        IF_DE.stalled = false;
-    }
-
-    if (cache_update(pipe.icache, pipe.PC) == 1){
+    if (cache_update(pipe.icache, IF_DE.PC) == 1){
         pipe.icache->waiting = true;
         IF_DE.operation.is_bubble = true;
         pipe.icache->cycles = 50;
         return;
     }
-    else IF_DE.PC = pipe.PC;  
 
     if (pipe.dcache->waiting){
         IF_DE.stalled_PC = pipe.PC;
