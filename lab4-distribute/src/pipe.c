@@ -586,7 +586,7 @@ void forward_MEM_EX(Pipe_Op operation) {
         DE_EX.FLAG_Z = EX_MEM.FLAG_Z; 
     }
     if (DE_EX.operation.type == CTYPE) {
-        if (DE_EX.operation.Rt == EX_MEM.operation.Rt) {
+        if (operation.mod_reg && DE_EX.operation.Rt == operation.Rt) {
             DE_EX.REGS[DE_EX.operation.Rt] = EX_MEM.REGS[operation.Rt]; 
         }
     }
@@ -608,10 +608,15 @@ void forward_WB_EX(Pipe_Op operation) {
         DE_EX.FLAG_N = MEM_WB.FLAG_N; 
         DE_EX.FLAG_Z = MEM_WB.FLAG_Z; 
     }
-    if (operation.mod_reg && DE_EX.operation.is_store && operation.Rt == DE_EX.operation.Rt)
+    if (operation.mod_reg && (DE_EX.operation.is_store || DE_EX.operation.type == CTYPE) && operation.Rt == DE_EX.operation.Rt)
     {
         DE_EX.REGS[DE_EX.operation.Rt] = MEM_WB.REGS[operation.Rt];
     }
+    // if (DE_EX.operation.type == CTYPE) {
+    //     if (operation.mod_reg && DE_EX.operation.Rt == operation.Rt) {
+    //         DE_EX.REGS[DE_EX.operation.Rt] = MEM_WB.REGS[operation.Rt]; 
+    //     }
+    // }
 }
 
 void pipe_stage_fetch()
@@ -651,12 +656,6 @@ void pipe_stage_fetch()
         IF_DE.stalled = true;
         return;
     } 
-
-    // if (IF_DE.stalled){
-    //     IF_DE.PC = IF_DE.stalled_PC;
-    //     IF_DE.sec_stall = true;
-    //     IF_DE.stalled = false;
-    // }
 
     IF_DE.operation = initialize_operation(); 
     IF_DE.operation.word = mem_read_32(IF_DE.PC);
