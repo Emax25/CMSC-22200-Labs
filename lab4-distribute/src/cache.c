@@ -106,7 +106,5 @@ bool same_block(cache_t *c, uint64_t addr, uint64_t target){
     int targ_tag = target >> 11;
     int curr_tag = addr >> 11;
     
-    // return (targ_set == curr_set) && (targ_tag == curr_tag);
-
-    return targ_set == curr_set;
+    return (targ_set == curr_set) && (targ_tag == curr_tag);
 }

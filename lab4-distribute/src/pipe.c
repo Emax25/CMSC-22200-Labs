@@ -75,10 +75,10 @@ void pipe_cycle()
         }
         else if (pipe.icache->waiting){
             pipe.icache->cycles--;
-            if (pipe.icache->cycles <= 0){
-                pipe.icache->waiting = false;
-                cache_insert(pipe.icache, IF_DE.PC);
-            }
+            // if (pipe.icache->cycles <= 0){
+            //     pipe.icache->waiting = false;
+            //     cache_insert(pipe.icache, IF_DE.PC);
+            // }
         }
     }
     else{
@@ -494,6 +494,9 @@ void pipe_stage_execute()
             IF_DE.sec_stall = false;
             prediction = pipe.PC;
         }
+
+        printf("TARGET = %0x\n", target);
+        printf("PREDICTION = %0x\n", prediction);
 
         if (!predicted(prediction, target) && PC != 0) {
             flush_pipeline();
