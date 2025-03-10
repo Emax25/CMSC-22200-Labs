@@ -495,9 +495,6 @@ void pipe_stage_execute()
             prediction = pipe.PC;
         }
 
-        printf("TARGET = %0x\n", target);
-        printf("PREDICTION = %0x\n", prediction);
-
         if (!predicted(prediction, target) && PC != 0) {
             flush_pipeline();
             if (pipe.icache->waiting){
