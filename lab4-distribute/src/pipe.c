@@ -502,14 +502,16 @@ void pipe_stage_execute()
                     pipe.icache->waiting = false;
                     pipe.icache->cycles = 0;
                 }
-                else{
+                else if (pipe.PC == target){
                     EX_MEM.flushed = false;
+                    IF_DE.sec_stall = true;
                 }
             }
             if (pipe.PC == target){
                 EX_MEM.flushed = false;
             }
-            else pipe.PC = target;
+            // else pipe.PC = target;
+            pipe.PC = target;
         }
     }
 
@@ -617,7 +619,7 @@ void forward_WB_EX(Pipe_Op operation) {
         DE_EX.FLAG_N = MEM_WB.FLAG_N; 
         DE_EX.FLAG_Z = MEM_WB.FLAG_Z; 
     }
-    if (operation.mod_reg && (DE_EX.operation.is_store || DE_EX.operation.type == CTYPE) && operation.Rt == DE_EX.operation.Rt)
+    if (operation.mod_reg && DE_EX.operation.is_store && operation.Rt == DE_EX.operation.Rt)
     {
         DE_EX.REGS[DE_EX.operation.Rt] = MEM_WB.REGS[operation.Rt];
     }
@@ -630,10 +632,6 @@ void forward_WB_EX(Pipe_Op operation) {
 
 void pipe_stage_fetch()
 {
-    if (EX_MEM.flushed){
-        IF_DE.operation.is_bubble = true;
-        return;
-    }
     if (IF_DE.stalled){
         IF_DE.PC = IF_DE.stalled_PC;
         IF_DE.sec_stall = true;
@@ -651,6 +649,10 @@ void pipe_stage_fetch()
             IF_DE.operation.is_bubble = true;
             return;
         }
+    }
+    if (EX_MEM.flushed){
+        IF_DE.operation.is_bubble = true;
+        return;
     }
 
     if (cache_update(pipe.icache, IF_DE.PC) == 1){
