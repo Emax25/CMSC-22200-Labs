@@ -103,6 +103,10 @@ void cache_insert(cache_t *c, uint64_t addr){
 bool same_block(cache_t *c, uint64_t addr, uint64_t target){
     int targ_set = (target>> 5) & 0x3F;
     int curr_set = (addr >> 5) & 0x3F;
+    int targ_tag = target >> 11;
+    int curr_tag = addr >> 11;
     
+    // return (targ_set == curr_set) && (targ_tag == curr_tag);
+
     return targ_set == curr_set;
 }

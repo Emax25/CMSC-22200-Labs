@@ -96,8 +96,8 @@ void flush_pipeline() {
 }
 
 void incr_PC(){
-    if (IF_DE.sec_stall) IF_DE.sec_stall = false;
-    else if (!HLT && !pipe.icache->waiting && !EX_MEM.flushed) { 
+    // if (IF_DE.sec_stall) IF_DE.sec_stall = false;
+    if (!HLT && !pipe.icache->waiting && !EX_MEM.flushed && !IF_DE.sec_stall) { 
         bp_predict(pipe.bp, &pipe.PC);
     }
 }
@@ -489,7 +489,13 @@ void pipe_stage_execute()
 
         bp_update(pipe.bp, DE_EX.PC, target, operation.will_jump, type == CTYPE);
 
-        if (!predicted(IF_DE.PC, target) && PC != 0) {
+        uint64_t prediction = IF_DE.PC;
+        if (IF_DE.sec_stall){
+            IF_DE.sec_stall = false;
+            prediction = pipe.PC;
+        }
+
+        if (!predicted(prediction, target) && PC != 0) {
             flush_pipeline();
             if (pipe.icache->waiting){
                 if (!same_block(pipe.icache, IF_DE.PC, target)){
@@ -500,7 +506,10 @@ void pipe_stage_execute()
                     EX_MEM.flushed = false;
                 }
             }
-            pipe.PC = target;
+            if (pipe.PC == target){
+                EX_MEM.flushed = false;
+            }
+            else pipe.PC = target;
         }
     }
 
